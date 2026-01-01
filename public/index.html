@@ -7,7 +7,6 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,104 +22,52 @@
             font-size: 1.2rem;
             color: #4b5563;
         }
-        /* Rest of styles from previous version */
     </style>
-    
-    <!-- Include all CSS from the embedded version -->
-    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
         
-        // API Base URL - will be root URL in production
-        const API_URL = window.location.origin + '/api';
-
-        const LenderPortal = () => {
-          const [lenders, setLenders] = useState([]);
+        const App = () => {
           const [loading, setLoading] = useState(true);
-          const [isAdmin, setIsAdmin] = useState(true);
-          const [editingId, setEditingId] = useState(null);
-          const [editForm, setEditForm] = useState({});
-          const [searchTerm, setSearchTerm] = useState('');
-          const [filters, setFilters] = useState({
-            lenderType: '',
-            minLoan: '',
-            maxLoan: '',
-            assetType: ''
-          });
-          const [showFilters, setShowFilters] = useState(false);
-          const [expandedRows, setExpandedRows] = useState(new Set());
-
-          // Load lenders from API on mount
+          const [lenders, setLenders] = useState([]);
+          
           useEffect(() => {
-            fetchLenders();
-          }, []);
-
-          const fetchLenders = async () => {
-            try {
-              const response = await fetch(`${API_URL}/lenders`);
-              const data = await response.json();
-              setLenders(data);
-              setLoading(false);
-            } catch (error) {
-              console.error('Error fetching lenders:', error);
-              alert('Error loading lenders. Please refresh the page.');
-              setLoading(false);
-            }
-          };
-
-          // Save lender to API
-          const saveLenderToAPI = async (lender) => {
-            try {
-              if (lender.id && lender.id > 1000) {
-                // Update existing
-                await fetch(`${API_URL}/lenders/${lender.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(lender)
-                });
-              } else {
-                // Create new
-                const response = await fetch(`${API_URL}/lenders`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(lender)
-                });
-                const newLender = await response.json();
-                return newLender;
-              }
-            } catch (error) {
-              console.error('Error saving lender:', error);
-              alert('Error saving lender');
-            }
-          };
-
-          // Delete lender from API
-          const deleteLenderFromAPI = async (id) => {
-            try {
-              await fetch(`${API_URL}/lenders/${id}`, {
-                method: 'DELETE'
+            fetch('/api/lenders')
+              .then(res => res.json())
+              .then(data => {
+                setLenders(data);
+                setLoading(false);
+              })
+              .catch(err => {
+                console.error('Error:', err);
+                alert('Error loading lenders: ' + err.message);
+                setLoading(false);
               });
-            } catch (error) {
-              console.error('Error deleting lender:', error);
-              alert('Error deleting lender');
-            }
-          };
-
-          // ... (rest of the component logic from embedded version)
-          // Import CSV, search, filter logic stays the same
+          }, []);
           
           if (loading) {
             return <div className="loading">Loading lenders...</div>;
           }
-
-          return <div>Portal UI here...</div>;
+          
+          return (
+            <div style={{padding: '20px'}}>
+              <h1>Commercial Lender Database - TEST VERSION</h1>
+              <p>Found {lenders.length} lenders</p>
+              <ul style={{marginTop: '20px'}}>
+                {lenders.map((lender, idx) => (
+                  <li key={idx} style={{marginBottom: '10px'}}>
+                    <strong>{lender.Lender}</strong> - {lender['Lender Type']} 
+                    {lender.Email && ` (${lender.Email})`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
         };
-
-        ReactDOM.render(<LenderPortal />, document.getElementById('root'));
+        
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
