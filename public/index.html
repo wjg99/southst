@@ -1188,7 +1188,7 @@
             }
           };
 
-          const [isAdmin, setIsAdmin] = useState(true);
+          const [isAdmin, setIsAdmin] = useState(false);
           const [editingId, setEditingId] = useState(null);
           const [editForm, setEditForm] = useState({});
           const [searchTerm, setSearchTerm] = useState('');
@@ -1844,23 +1844,88 @@
                                     <div className="details-grid">
                                       <div className="details-section">
                                         <h4>Loan Details</h4>
-                                        {lender['Loan Program'] && <p><span className="detail-label">Program:</span> {lender['Loan Program']}</p>}
-                                        {lender['Avg. Loan'] && <p><span className="detail-label">Avg Loan:</span> {lender['Avg. Loan']}</p>}
-                                        {lender.Constraints && <p><span className="detail-label">Constraints:</span> {lender.Constraints}</p>}
-                                        {lender['Spread/Pricing'] && <p><span className="detail-label">Pricing:</span> {lender['Spread/Pricing']}</p>}
+                                        {editingId === lender.id ? (
+                                          <>
+                                            <p><span className="detail-label">Program:</span><br/>
+                                              <input type="text" value={editForm['Loan Program'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Loan Program': e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Avg Loan:</span><br/>
+                                              <input type="text" value={editForm['Avg. Loan'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Avg. Loan': e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Constraints:</span><br/>
+                                              <textarea value={editForm.Constraints || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, Constraints: e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Pricing:</span><br/>
+                                              <textarea value={editForm['Spread/Pricing'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Spread/Pricing': e.target.value })} />
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <>
+                                            {lender['Loan Program'] && <p><span className="detail-label">Program:</span> {lender['Loan Program']}</p>}
+                                            {lender['Avg. Loan'] && <p><span className="detail-label">Avg Loan:</span> {lender['Avg. Loan']}</p>}
+                                            {lender.Constraints && <p><span className="detail-label">Constraints:</span> {lender.Constraints}</p>}
+                                            {lender['Spread/Pricing'] && <p><span className="detail-label">Pricing:</span> {lender['Spread/Pricing']}</p>}
+                                          </>
+                                        )}
                                       </div>
                                       <div className="details-section">
                                         <h4>Structure & Terms</h4>
-                                        {lender.Structure && <p><span className="detail-label">Structure:</span> {lender.Structure}</p>}
-                                        {lender.Prepayment && <p><span className="detail-label">Prepayment:</span> {lender.Prepayment}</p>}
-                                        {lender['Guarantee/Reserves/Covenants'] && <p><span className="detail-label">Guarantees:</span> {lender['Guarantee/Reserves/Covenants']}</p>}
-                                        {lender['Fees / Deposits'] && <p><span className="detail-label">Fees:</span> {lender['Fees / Deposits']}</p>}
+                                        {editingId === lender.id ? (
+                                          <>
+                                            <p><span className="detail-label">Structure:</span><br/>
+                                              <textarea value={editForm.Structure || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, Structure: e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Prepayment:</span><br/>
+                                              <textarea value={editForm.Prepayment || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, Prepayment: e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Guarantees:</span><br/>
+                                              <textarea value={editForm['Guarantee/Reserves/Covenants'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Guarantee/Reserves/Covenants': e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Fees:</span><br/>
+                                              <textarea value={editForm['Fees / Deposits'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Fees / Deposits': e.target.value })} />
+                                            </p>
+                                            <p><span className="detail-label">Lock/App/Commitment:</span><br/>
+                                              <textarea value={editForm['Lock/App/Commitment/Closing'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Lock/App/Commitment/Closing': e.target.value })} />
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <>
+                                            {lender.Structure && <p><span className="detail-label">Structure:</span> {lender.Structure}</p>}
+                                            {lender.Prepayment && <p><span className="detail-label">Prepayment:</span> {lender.Prepayment}</p>}
+                                            {lender['Guarantee/Reserves/Covenants'] && <p><span className="detail-label">Guarantees:</span> {lender['Guarantee/Reserves/Covenants']}</p>}
+                                            {lender['Fees / Deposits'] && <p><span className="detail-label">Fees:</span> {lender['Fees / Deposits']}</p>}
+                                          </>
+                                        )}
                                       </div>
-                                      {(lender['Will not do'] || lender['Additional Info']) && (
+                                      {(lender['Will not do'] || lender['Additional Info'] || editingId === lender.id) && (
                                         <div className="details-section" style={{gridColumn: '1 / -1'}}>
                                           <h4>Additional Information</h4>
-                                          {lender['Will not do'] && <p><span className="detail-label text-red">Will Not Do:</span> {lender['Will not do']}</p>}
-                                          {lender['Additional Info'] && <p><span className="detail-label">Notes:</span> {lender['Additional Info']}</p>}
+                                          {editingId === lender.id ? (
+                                            <>
+                                              <p><span className="detail-label text-red">Will Not Do:</span><br/>
+                                                <textarea value={editForm['Will not do'] || ''} 
+                                                  onChange={(e) => setEditForm({ ...editForm, 'Will not do': e.target.value })} />
+                                              </p>
+                                              <p><span className="detail-label">Notes:</span><br/>
+                                                <textarea value={editForm['Additional Info'] || ''} 
+                                                  onChange={(e) => setEditForm({ ...editForm, 'Additional Info': e.target.value })} />
+                                              </p>
+                                            </>
+                                          ) : (
+                                            <>
+                                              {lender['Will not do'] && <p><span className="detail-label text-red">Will Not Do:</span> {lender['Will not do']}</p>}
+                                              {lender['Additional Info'] && <p><span className="detail-label">Notes:</span> {lender['Additional Info']}</p>}
+                                            </>
+                                          )}
                                         </div>
                                       )}
                                     </div>
@@ -1883,3 +1948,4 @@
     </script>
 </body>
 </html>
+
