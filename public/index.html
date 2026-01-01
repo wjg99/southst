@@ -659,6 +659,7 @@
           const [searchTerm, setSearchTerm] = useState('');
           const [quotes, setQuotes] = useState([]);
           const [activeTab, setActiveTab] = useState('lenders');
+          const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
           const [filters, setFilters] = useState({
             lenderType: '',
             minLoan: '',
@@ -819,6 +820,7 @@
               amount: null,
               assetTypes: [],
               lenderTypes: [],
+              loanPrograms: [],
               keywords: []
             };
 
@@ -888,15 +890,42 @@
             }
             parsed.assetTypes = Array.from(foundAssetTypes);
 
-            // Extract lender types
-            const lenderTypeKeywords = [
-              'bank', 'lifeco', 'life company', 'cmbs', 'debt fund', 'agency', 
-              'freddie', 'fannie', 'credit union', 'insurance'
+            // Extract loan programs
+            const loanProgramKeywords = [
+              'permanent', 'bridge', 'construction', 'cmbs', 'ctl', 'c-t-l',
+              'construction to perm', 'hospitality', 'hospitality bridge', 'bridge hybrid'
             ];
+            
+            for (const program of loanProgramKeywords) {
+              if (queryLower.includes(program)) {
+                parsed.loanPrograms.push(program);
+              }
+            }
 
-            for (const lenderType of lenderTypeKeywords) {
-              if (queryLower.includes(lenderType)) {
-                parsed.lenderTypes.push(lenderType);
+            // Extract lender types - check specific multi-word types FIRST
+            const specificLenderTypes = [
+              'correspondent lifeco',
+              'life company', 
+              'debt fund',
+              'credit union'
+            ];
+            
+            let foundSpecificType = false;
+            for (const type of specificLenderTypes) {
+              if (queryLower.includes(type)) {
+                parsed.lenderTypes.push(type);
+                foundSpecificType = true;
+                break; // Only match the most specific type
+              }
+            }
+            
+            // Only check single-word types if no specific multi-word type was found
+            if (!foundSpecificType) {
+              const singleWordTypes = ['bank', 'lifeco', 'agency', 'freddie', 'fannie', 'insurance'];
+              for (const type of singleWordTypes) {
+                if (queryLower.includes(type)) {
+                  parsed.lenderTypes.push(type);
+                }
               }
             }
 
@@ -969,6 +998,18 @@
                   );
                   
                   if (!hasType) {
+                    return false;
+                  }
+                }
+                
+                // Check loan programs if specified
+                if (parsed.loanPrograms.length > 0) {
+                  const lenderProgram = (lender['Loan Program'] || '').toLowerCase();
+                  const hasProgram = parsed.loanPrograms.some(program => 
+                    lenderProgram.includes(program)
+                  );
+                  
+                  if (!hasProgram) {
                     return false;
                   }
                 }
@@ -1191,9 +1232,9 @@
                           <tr>
                             <th>Lender</th>
                             <th>Type</th>
-                            <th>Loan Range</th>
-                            <th>Asset Types</th>
+                            <th>Program</th>
                             <th>Contact</th>
+                            <th>Loan Range</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -1201,6 +1242,7 @@
                           {filteredLenders.map((lender) => (
                             <React.Fragment key={lender.id}>
                               <tr>
+                                {/* Lender Name */}
                                 <td>
                                   {editingId === lender.id ? (
                                     <input
@@ -1212,6 +1254,8 @@
                                     <div className="lender-name">{lender.Lender}</div>
                                   )}
                                 </td>
+                                
+                                {/* Type */}
                                 <td>
                                   {editingId === lender.id ? (
                                     <input
@@ -1223,43 +1267,23 @@
                                     <span className="badge">{lender['Lender Type']}</span>
                                   )}
                                 </td>
-                                <td className="text-gray">
+                                
+                                {/* Program */}
+                                <td>
                                   {editingId === lender.id ? (
-                                    <div className="space-y-1">
-                                      <input
-                                        type="text"
-                                        placeholder="Min"
-                                        value={editForm['Min Loan'] || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, 'Min Loan': e.target.value })}
-                                        style={{fontSize: '0.75rem'}}
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="Max"
-                                        value={editForm['Max Loan'] || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, 'Max Loan': e.target.value })}
-                                        style={{fontSize: '0.75rem'}}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      {lender['Min Loan'] && <div>Min: {lender['Min Loan']}</div>}
-                                      {lender['Max Loan'] && <div>Max: {lender['Max Loan']}</div>}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="text-gray max-w-xs">
-                                  {editingId === lender.id ? (
-                                    <textarea
-                                      value={editForm['Asset Types/Classes/Markets'] || ''}
-                                      onChange={(e) => setEditForm({ ...editForm, 'Asset Types/Classes/Markets': e.target.value })}
-                                      rows="2"
-                                      style={{fontSize: '0.75rem'}}
+                                    <input
+                                      type="text"
+                                      value={editForm['Loan Program'] || ''}
+                                      onChange={(e) => setEditForm({ ...editForm, 'Loan Program': e.target.value })}
                                     />
                                   ) : (
-                                    <div className="truncate">{lender['Asset Types/Classes/Markets']}</div>
+                                    <span className="badge" style={{backgroundColor: '#dcfce7', color: '#166534'}}>
+                                      {lender['Loan Program'] || 'N/A'}
+                                    </span>
                                   )}
                                 </td>
+                                
+                                {/* Contact */}
                                 <td className="text-gray">
                                   {editingId === lender.id ? (
                                     <div className="space-y-1">
@@ -1290,6 +1314,33 @@
                                       {lender['Point of Contact'] && <div>{lender['Point of Contact']}</div>}
                                       {lender.Phone && <div className="text-xs">{lender.Phone}</div>}
                                       {lender.Email && <div className="text-xs text-blue">{lender.Email}</div>}
+                                    </div>
+                                  )}
+                                </td>
+                                
+                                {/* Loan Range */}
+                                <td className="text-gray">
+                                  {editingId === lender.id ? (
+                                    <div className="space-y-1">
+                                      <input
+                                        type="text"
+                                        placeholder="Min"
+                                        value={editForm['Min Loan'] || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, 'Min Loan': e.target.value })}
+                                        style={{fontSize: '0.75rem'}}
+                                      />
+                                      <input
+                                        type="text"
+                                        placeholder="Max"
+                                        value={editForm['Max Loan'] || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, 'Max Loan': e.target.value })}
+                                        style={{fontSize: '0.75rem'}}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      {lender['Min Loan'] && <div>Min: {lender['Min Loan']}</div>}
+                                      {lender['Max Loan'] && <div>Max: {lender['Max Loan']}</div>}
                                     </div>
                                   )}
                                 </td>
@@ -1484,15 +1535,37 @@
                 {activeTab === 'quotes' && (
                   <div className="card">
                     <h2 style={{marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '600'}}>Quote Database</h2>
-                    <p style={{color: '#6b7280', marginBottom: '1rem'}}>
-                      Showing all {quotes.length} historical quotes
-                    </p>
+                    
+                    <div className="search-container" style={{marginBottom: '1.5rem'}}>
+                      <div className="search-icon"><SearchIcon /></div>
+                      <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search by lender, property type, or deal name..."
+                        value={quoteSearchTerm}
+                        onChange={(e) => setQuoteSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    
                     {quotes.length === 0 ? (
                       <div style={{textAlign: 'center', padding: '3rem', color: '#6b7280'}}>
                         <p>No quotes loaded. Make sure quotes.json is uploaded to your server.</p>
                       </div>
                     ) : (
-                      <div className="table-container">
+                      <>
+                        <p style={{color: '#6b7280', marginBottom: '1rem', fontSize: '0.875rem'}}>
+                          Showing {quotes.filter(q => {
+                            if (!quoteSearchTerm) return true;
+                            const search = quoteSearchTerm.toLowerCase();
+                            const searchFields = [
+                              q['Lender '] || q['Lender'],
+                              q['Product Type'],
+                              q['Deal Name']
+                            ].join(' ').toLowerCase();
+                            return searchFields.includes(search);
+                          }).length} of {quotes.length} quotes
+                        </p>
+                        <div className="table-container">
                         <table>
                           <thead>
                             <tr>
@@ -1509,7 +1582,16 @@
                             </tr>
                           </thead>
                           <tbody>
-                            {quotes.slice(0, 50).map((quote, idx) => (
+                            {quotes.filter(q => {
+                              if (!quoteSearchTerm) return true;
+                              const search = quoteSearchTerm.toLowerCase();
+                              const searchFields = [
+                                q['Lender '] || q['Lender'],
+                                q['Product Type'],
+                                q['Deal Name']
+                              ].join(' ').toLowerCase();
+                              return searchFields.includes(search);
+                            }).slice(0, 100).map((quote, idx) => (
                               <tr key={idx}>
                                 <td>{quote.Date}</td>
                                 <td>{quote['Deal Name']}</td>
@@ -1525,13 +1607,9 @@
                             ))}
                           </tbody>
                         </table>
-                        {quotes.length > 50 && (
-                          <p style={{marginTop: '1rem', color: '#6b7280', fontSize: '0.875rem'}}>
-                            Showing first 50 of {quotes.length} quotes
-                          </p>
-                        )}
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
