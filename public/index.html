@@ -1042,6 +1042,23 @@
               </div>
 
               <div className="main-content">
+                {/* Tab Navigation */}
+                <div className="tabs">
+                  <button 
+                    className={`tab ${activeTab === 'lenders' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('lenders')}
+                  >
+                    🔍 Lender Search ({filteredLenders.length})
+                  </button>
+                  <button 
+                    className={`tab ${activeTab === 'quotes' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('quotes')}
+                  >
+                    📊 Quote Database ({quotes.length})
+                  </button>
+                </div>
+
+                {activeTab === 'lenders' && (
                 <div className="card">
                   <div className="action-bar">
                     <div style={{display: 'flex', gap: '0.75rem', flex: 1}}>
@@ -1459,6 +1476,62 @@
                     </div>
                   )}
                 </div>
+                )}
+                
+                {/* Quote Database Tab */}
+                {activeTab === 'quotes' && (
+                  <div className="card">
+                    <h2 style={{marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '600'}}>Quote Database</h2>
+                    <p style={{color: '#6b7280', marginBottom: '1rem'}}>
+                      Showing all {quotes.length} historical quotes
+                    </p>
+                    {quotes.length === 0 ? (
+                      <div style={{textAlign: 'center', padding: '3rem', color: '#6b7280'}}>
+                        <p>No quotes loaded. Make sure quotes.json is uploaded to your server.</p>
+                      </div>
+                    ) : (
+                      <div className="table-container">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Deal Name</th>
+                              <th>Lender</th>
+                              <th>Property Type</th>
+                              <th>Proceeds</th>
+                              <th>LTV</th>
+                              <th>Spread</th>
+                              <th>Rate</th>
+                              <th>Term</th>
+                              <th>Amort</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {quotes.slice(0, 50).map((quote, idx) => (
+                              <tr key={idx}>
+                                <td>{quote.Date}</td>
+                                <td>{quote['Deal Name']}</td>
+                                <td>{(quote['Lender '] || quote['Lender'] || '').trim()}</td>
+                                <td>{quote['Product Type']}</td>
+                                <td>{quote.Proceeds}</td>
+                                <td>{quote.Leverage}</td>
+                                <td>{quote.Spread || 'n/a'}</td>
+                                <td>{quote['Full Rate']}</td>
+                                <td>{quote.Term}</td>
+                                <td>{quote.Amoritization}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {quotes.length > 50 && (
+                          <p style={{marginTop: '1rem', color: '#6b7280', fontSize: '0.875rem'}}>
+                            Showing first 50 of {quotes.length} quotes
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
