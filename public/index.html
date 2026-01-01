@@ -1015,7 +1015,11 @@
                 }
 
                 // Check remaining keywords against all searchable fields
-                if (parsed.keywords.length > 0 && parsed.assetTypes.length === 0) {
+                // Skip keyword matching if we already have specific filters (asset types, loan programs, lender types)
+                if (parsed.keywords.length > 0 && 
+                    parsed.assetTypes.length === 0 && 
+                    parsed.loanPrograms.length === 0 &&
+                    parsed.lenderTypes.length === 0) {
                   const searchableFields = [
                     lender.Lender,
                     lender['Lender Type'],
