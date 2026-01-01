@@ -393,6 +393,104 @@
             font-size: 0.875rem;
         }
         
+        /* Tab Styles */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: -2px;
+            font-size: 0.875rem;
+        }
+        
+        .tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        
+        .tab:hover {
+            color: #2563eb;
+        }
+        
+        /* Quote Styles */
+        .quote-mini {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto auto auto auto;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            align-items: center;
+        }
+        
+        .quote-mini-label {
+            color: #6b7280;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .quote-mini-value {
+            color: #111827;
+            font-weight: 500;
+        }
+        
+        .recent-quotes {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .recent-quotes-header {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+        }
+        
+        .quote-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .quote-expanded-row {
+            background-color: #f9fafb;
+        }
+        
+        .quote-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1rem;
+        }
+        
+        .quote-details-section h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        
+        .quote-details-section p {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+            font-size: 0.875rem;
+        }
+        
         input[type="file"] {
             display: none;
         }
@@ -1135,10 +1233,59 @@
           const [lenders, setLenders] = useState([]);
           const [loading, setLoading] = useState(true);
           
-          // Load lenders from API on mount
+          // Load lenders and quotes from API on mount
           useEffect(() => {
             fetchLenders();
+            fetchQuotes();
           }, []);
+
+          const fetchQuotes = async () => {
+            try {
+              const response = await fetch('/api/quotes');
+              const data = await response.json();
+              setQuotes(data);
+            } catch (error) {
+              console.error('Error fetching quotes:', error);
+            }
+          };
+          
+          // Get relevant quotes for a lender (last 12 months, max 3)
+          const getRelevantQuotes = (lenderName, propertyTypes = []) => {
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+            
+            return quotes
+              .filter(q => {
+                // Match lender name
+                const quoteLender = (q['Lender '] || q['Lender'] || '').trim();
+                if (quoteLender !== lenderName) return false;
+                
+                // Check if within last 12 months
+                try {
+                  const quoteDate = new Date(q.Date);
+                  if (quoteDate < twelveMonthsAgo) return false;
+                } catch (e) {
+                  // If date parsing fails, skip date filter
+                }
+                
+                // If we have property type filters, apply them
+                if (propertyTypes.length > 0) {
+                  const quoteType = (q['Product Type'] || '').toLowerCase();
+                  const matches = propertyTypes.some(pt => quoteType.includes(pt.toLowerCase()));
+                  if (!matches) return false;
+                }
+                
+                return true;
+              })
+              .sort((a, b) => {
+                try {
+                  return new Date(b.Date) - new Date(a.Date);
+                } catch (e) {
+                  return 0;
+                }
+              })
+              .slice(0, 3); // Max 3 quotes
+          };
 
           const fetchLenders = async () => {
             try {
@@ -1192,6 +1339,10 @@
           const [editingId, setEditingId] = useState(null);
           const [editForm, setEditForm] = useState({});
           const [searchTerm, setSearchTerm] = useState('');
+          const [activeTab, setActiveTab] = useState('lenders');
+          const [quotes, setQuotes] = useState([]);
+          const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
+          const [expandedQuotes, setExpandedQuotes] = useState(new Set());
           const [filters, setFilters] = useState({
             lenderType: '',
             minLoan: '',
@@ -1575,6 +1726,24 @@
               </div>
 
               <div className="main-content">
+                {/* Tab Navigation */}
+                <div className="tabs">
+                  <button 
+                    className={`tab ${activeTab === 'lenders' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('lenders')}
+                  >
+                    🔍 Lender Search ({filteredLenders.length})
+                  </button>
+                  <button 
+                    className={`tab ${activeTab === 'quotes' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('quotes')}
+                  >
+                    📊 Quote Database ({quotes.length})
+                  </button>
+                </div>
+
+                {/* Lender Search Tab */}
+                {activeTab === 'lenders' && (
                 <div className="card">
                   <div className="action-bar">
                     <div style={{display: 'flex', gap: '0.75rem', flex: 1}}>
@@ -1929,6 +2098,56 @@
                                         </div>
                                       )}
                                     </div>
+                                    
+                                    {/* Recent Quotes Section */}
+                                    {(() => {
+                                      const relevantQuotes = getRelevantQuotes(lender.Lender);
+                                      return relevantQuotes.length > 0 && (
+                                        <div className="recent-quotes">
+                                          <div className="recent-quotes-header">
+                                            📊 Recent Quotes (Last 12 Months)
+                                          </div>
+                                          {relevantQuotes.map((quote, qIdx) => (
+                                            <div key={qIdx} className="quote-mini">
+                                              <div>
+                                                <div className="quote-mini-label">Date</div>
+                                                <div className="quote-mini-value">{quote.Date}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Deal</div>
+                                                <div className="quote-mini-value" style={{fontSize: '0.75rem'}}>
+                                                  {(quote['Deal Name'] || '').substring(0, 30)}{(quote['Deal Name'] || '').length > 30 ? '...' : ''}
+                                                </div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Amount</div>
+                                                <div className="quote-mini-value">{quote.Proceeds}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">LTV</div>
+                                                <div className="quote-mini-value">{quote.Leverage}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Spread</div>
+                                                <div className="quote-mini-value">{quote.Spread || 'n/a'}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Rate</div>
+                                                <div className="quote-mini-value">{quote['Full Rate']}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Term</div>
+                                                <div className="quote-mini-value">{quote.Term}</div>
+                                              </div>
+                                              <div>
+                                                <div className="quote-mini-label">Amort</div>
+                                                <div className="quote-mini-value">{quote.Amoritization}</div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
                                   </td>
                                 </tr>
                               )}
@@ -1939,6 +2158,130 @@
                     </div>
                   )}
                 </div>
+                )}
+                
+                {/* Quotes Database Tab */}
+                {activeTab === 'quotes' && (
+                  <div className="card">
+                    <h2 style={{marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '600'}}>Quote Database</h2>
+                    
+                    <div className="search-container" style={{marginBottom: '1.5rem'}}>
+                      <div className="search-icon"><SearchIcon /></div>
+                      <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search quotes by lender, property type, or deal name..."
+                        value={quoteSearchTerm}
+                        onChange={(e) => setQuoteSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="table-container">
+                      <table className="quote-table">
+                        <thead>
+                          <tr>
+                            <th style={{width: '30px'}}></th>
+                            <th>Date</th>
+                            <th>Deal Name</th>
+                            <th>Lender</th>
+                            <th>Property Type</th>
+                            <th>Proceeds</th>
+                            <th>LTV</th>
+                            <th>Spread</th>
+                            <th>Rate</th>
+                            <th>Term</th>
+                            <th>Amort</th>
+                            <th>Orig</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {quotes.filter(q => {
+                            if (!quoteSearchTerm) return true;
+                            const search = quoteSearchTerm.toLowerCase();
+                            const searchFields = [
+                              q['Lender '] || q['Lender'],
+                              q['Product Type'],
+                              q['Deal Name'],
+                              q.Originator
+                            ].join(' ').toLowerCase();
+                            return searchFields.includes(search);
+                          }).map((quote, idx) => (
+                            <React.Fragment key={idx}>
+                              <tr onClick={() => {
+                                const newExpanded = new Set(expandedQuotes);
+                                if (newExpanded.has(idx)) {
+                                  newExpanded.delete(idx);
+                                } else {
+                                  newExpanded.add(idx);
+                                }
+                                setExpandedQuotes(newExpanded);
+                              }} style={{cursor: 'pointer'}}>
+                                <td>
+                                  <span className="icon-xs">
+                                    {expandedQuotes.has(idx) ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                                  </span>
+                                </td>
+                                <td>{quote.Date}</td>
+                                <td>{quote['Deal Name']}</td>
+                                <td>{(quote['Lender '] || quote['Lender'] || '').trim()}</td>
+                                <td>{quote['Product Type']}</td>
+                                <td>{quote.Proceeds}</td>
+                                <td>{quote.Leverage}</td>
+                                <td>{quote.Spread || 'n/a'}</td>
+                                <td>{quote['Full Rate']}</td>
+                                <td>{quote.Term}</td>
+                                <td>{quote.Amoritization}</td>
+                                <td>{quote.Originator}</td>
+                              </tr>
+                              
+                              {expandedQuotes.has(idx) && (
+                                <tr className="quote-expanded-row">
+                                  <td colSpan="12">
+                                    <div className="quote-details-grid">
+                                      <div className="quote-details-section">
+                                        <h4>Deal Details</h4>
+                                        {quote['Deal Type'] && <p><strong>Deal Type:</strong> {quote['Deal Type']}</p>}
+                                        {quote['SF/Units'] && <p><strong>SF/Units:</strong> {quote['SF/Units']}</p>}
+                                      </div>
+                                      
+                                      <div className="quote-details-section">
+                                        <h4>Pricing Details</h4>
+                                        {quote['Index Base'] && <p><strong>Index Base:</strong> {quote['Index Base']}</p>}
+                                        {quote['Index Rate'] && <p><strong>Index Rate:</strong> {quote['Index Rate']}</p>}
+                                        {quote.Floor && <p><strong>Floor:</strong> {quote.Floor}</p>}
+                                      </div>
+                                      
+                                      <div className="quote-details-section">
+                                        <h4>Terms & Structure</h4>
+                                        {quote.Recourse && <p><strong>Recourse:</strong> {quote.Recourse}</p>}
+                                        {quote.Prepayment && <p><strong>Prepayment:</strong> {quote.Prepayment}</p>}
+                                        {quote['Guarantee/Reserves/Covenants'] && <p><strong>Guarantees/Reserves:</strong> {quote['Guarantee/Reserves/Covenants']}</p>}
+                                      </div>
+                                      
+                                      <div className="quote-details-section">
+                                        <h4>Fees & Conditions</h4>
+                                        {quote['Lender Fee'] && <p><strong>Lender Fee:</strong> {quote['Lender Fee']}</p>}
+                                        {quote['Ecrows/Covenants'] && <p><strong>Escrows/Covenants:</strong> {quote['Ecrows/Covenants']}</p>}
+                                        {quote['Lock/App/Commitment/Closing'] && <p><strong>Lock/Commitment:</strong> {quote['Lock/App/Commitment/Closing']}</p>}
+                                      </div>
+                                      
+                                      {quote['Comments - Other Conditions'] && (
+                                        <div className="quote-details-section" style={{gridColumn: '1 / -1'}}>
+                                          <h4>Additional Information</h4>
+                                          <p>{quote['Comments - Other Conditions']}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -1948,3 +2291,4 @@
     </script>
 </body>
 </html>
+
