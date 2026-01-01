@@ -1503,6 +1503,7 @@
               amount: null,
               assetTypes: [],
               lenderTypes: [],
+              loanPrograms: [],
               keywords: []
             };
 
@@ -1530,6 +1531,18 @@
               'student housing': ['student housing', 'student'],
               'senior housing': ['senior housing', 'senior', 'assisted living'],
             };
+
+            // Extract loan programs
+            const loanProgramKeywords = [
+              'permanent', 'bridge', 'construction', 'cmbs', 'ctl', 'c-t-l', 
+              'construction to perm', 'hospitality bridge', 'bridge hybrid'
+            ];
+            
+            for (const program of loanProgramKeywords) {
+              if (queryLower.includes(program)) {
+                parsed.loanPrograms.push(program);
+              }
+            }
 
             // Extract loan amount (e.g., "$5 million", "5m", "5000000", "5MM")
             const amountPatterns = [
@@ -1572,15 +1585,28 @@
             }
             parsed.assetTypes = Array.from(foundAssetTypes);
 
-            // Extract lender types
-            const lenderTypeKeywords = [
-              'bank', 'lifeco', 'life company', 'cmbs', 'debt fund', 'agency', 
-              'freddie', 'fannie', 'credit union', 'insurance'
+            // Extract lender types with better matching
+            // Check for specific multi-word types first, then single words
+            const specificLenderTypes = [
+              'correspondent lifeco',
+              'life company',
+              'debt fund',
+              'credit union'
             ];
-
-            for (const lenderType of lenderTypeKeywords) {
-              if (queryLower.includes(lenderType)) {
-                parsed.lenderTypes.push(lenderType);
+            
+            for (const type of specificLenderTypes) {
+              if (queryLower.includes(type)) {
+                parsed.lenderTypes.push(type);
+              }
+            }
+            
+            // Only check single-word types if no specific match found
+            if (parsed.lenderTypes.length === 0) {
+              const singleWordTypes = ['bank', 'lifeco', 'cmbs', 'agency', 'freddie', 'fannie', 'insurance'];
+              for (const type of singleWordTypes) {
+                if (queryLower.includes(type)) {
+                  parsed.lenderTypes.push(type);
+                }
               }
             }
 
@@ -1653,6 +1679,18 @@
                   );
                   
                   if (!hasType) {
+                    return false;
+                  }
+                }
+                
+                // Check loan programs if specified
+                if (parsed.loanPrograms.length > 0) {
+                  const lenderProgram = (lender['Loan Program'] || '').toLowerCase();
+                  const hasProgram = parsed.loanPrograms.some(program => 
+                    lenderProgram.includes(program)
+                  );
+                  
+                  if (!hasProgram) {
                     return false;
                   }
                 }
@@ -1876,9 +1914,9 @@
                           <tr>
                             <th>Lender</th>
                             <th>Type</th>
-                            <th>Loan Range</th>
-                            <th>Asset Types</th>
+                            <th>Program</th>
                             <th>Contact</th>
+                            <th>Loan Range</th>
                             <th>Actions</th>
                           </tr>
                         </thead>
@@ -1886,6 +1924,7 @@
                           {filteredLenders.map((lender) => (
                             <React.Fragment key={lender.id}>
                               <tr>
+                                {/* Lender Name */}
                                 <td>
                                   {editingId === lender.id ? (
                                     <input
@@ -1897,6 +1936,8 @@
                                     <div className="lender-name">{lender.Lender}</div>
                                   )}
                                 </td>
+                                
+                                {/* Type */}
                                 <td>
                                   {editingId === lender.id ? (
                                     <input
@@ -1908,6 +1949,58 @@
                                     <span className="badge">{lender['Lender Type']}</span>
                                   )}
                                 </td>
+                                
+                                {/* Program */}
+                                <td>
+                                  {editingId === lender.id ? (
+                                    <input
+                                      type="text"
+                                      value={editForm['Loan Program'] || ''}
+                                      onChange={(e) => setEditForm({ ...editForm, 'Loan Program': e.target.value })}
+                                    />
+                                  ) : (
+                                    <span className="badge" style={{backgroundColor: '#dcfce7', color: '#166534'}}>
+                                      {lender['Loan Program'] || 'N/A'}
+                                    </span>
+                                  )}
+                                </td>
+                                
+                                {/* Contact */}
+                                <td className="text-gray">
+                                  {editingId === lender.id ? (
+                                    <div className="space-y-1">
+                                      <input
+                                        type="text"
+                                        placeholder="Name"
+                                        value={editForm['Point of Contact'] || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, 'Point of Contact': e.target.value })}
+                                        style={{fontSize: '0.75rem'}}
+                                      />
+                                      <input
+                                        type="text"
+                                        placeholder="Phone"
+                                        value={editForm.Phone || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, Phone: e.target.value })}
+                                        style={{fontSize: '0.75rem'}}
+                                      />
+                                      <input
+                                        type="email"
+                                        placeholder="Email"
+                                        value={editForm.Email || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, Email: e.target.value })}
+                                        style={{fontSize: '0.75rem'}}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <div>{lender['Point of Contact']}</div>
+                                      <div className="text-xs">{lender.Phone}</div>
+                                      <div className="text-xs">{lender.Email}</div>
+                                    </div>
+                                  )}
+                                </td>
+                                
+                                {/* Loan Range */}
                                 <td className="text-gray">
                                   {editingId === lender.id ? (
                                     <div className="space-y-1">
@@ -1933,41 +2026,6 @@
                                     </div>
                                   )}
                                 </td>
-                                <td className="text-gray max-w-xs">
-                                  {editingId === lender.id ? (
-                                    <textarea
-                                      value={editForm['Asset Types/Classes/Markets'] || ''}
-                                      onChange={(e) => setEditForm({ ...editForm, 'Asset Types/Classes/Markets': e.target.value })}
-                                      rows="2"
-                                      style={{fontSize: '0.75rem'}}
-                                    />
-                                  ) : (
-                                    <div className="truncate">{lender['Asset Types/Classes/Markets']}</div>
-                                  )}
-                                </td>
-                                <td className="text-gray">
-                                  {editingId === lender.id ? (
-                                    <div className="space-y-1">
-                                      <input
-                                        type="text"
-                                        placeholder="Name"
-                                        value={editForm['Point of Contact'] || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, 'Point of Contact': e.target.value })}
-                                        style={{fontSize: '0.75rem'}}
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="Phone"
-                                        value={editForm.Phone || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, Phone: e.target.value })}
-                                        style={{fontSize: '0.75rem'}}
-                                      />
-                                      <input
-                                        type="email"
-                                        placeholder="Email"
-                                        value={editForm.Email || ''}
-                                        onChange={(e) => setEditForm({ ...editForm, Email: e.target.value })}
-                                        style={{fontSize: '0.75rem'}}
                                       />
                                     </div>
                                   ) : (
@@ -2293,5 +2351,3 @@
     </script>
 </body>
 </html>
-
-
