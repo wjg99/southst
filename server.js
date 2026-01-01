@@ -13,9 +13,11 @@ app.use(express.static('public'));
 
 // In-memory database (will use file for persistence)
 const DB_FILE = path.join(__dirname, 'lenders.json');
+const QUOTES_FILE = path.join(__dirname, 'quotes.json');
 
 // Initialize database
 let lenders = [];
+let quotes = [];
 
 // Load lenders from file
 function loadLenders() {
@@ -30,6 +32,19 @@ function loadLenders() {
   }
 }
 
+// Load quotes from file
+function loadQuotes() {
+  try {
+    if (fs.existsSync(QUOTES_FILE)) {
+      const data = fs.readFileSync(QUOTES_FILE, 'utf8');
+      quotes = JSON.parse(data);
+      console.log(`Loaded ${quotes.length} quotes from database`);
+    }
+  } catch (error) {
+    console.error('Error loading quotes:', error);
+  }
+}
+
 // Save lenders to file
 function saveLenders() {
   try {
@@ -39,8 +54,18 @@ function saveLenders() {
   }
 }
 
+// Save quotes to file
+function saveQuotes() {
+  try {
+    fs.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+  } catch (error) {
+    console.error('Error saving quotes:', error);
+  }
+}
+
 // Initialize on startup
 loadLenders();
+loadQuotes();
 
 // API Routes
 
@@ -99,6 +124,64 @@ app.post('/api/lenders/import', (req, res) => {
   res.json({ count: lenders.length });
 });
 
+// QUOTE ROUTES
+
+// Get all quotes
+app.get('/api/quotes', (req, res) => {
+  res.json(quotes);
+});
+
+// Add new quote
+app.post('/api/quotes', (req, res) => {
+  const newQuote = {
+    ...req.body,
+    id: Date.now()
+  };
+  quotes.push(newQuote);
+  saveQuotes();
+  res.json(newQuote);
+});
+
+// Update quote
+app.put('/api/quotes/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = quotes.findIndex(q => q.id === id);
+  
+  if (index !== -1) {
+    quotes[index] = { ...req.body, id };
+    saveQuotes();
+    res.json(quotes[index]);
+  } else {
+    res.status(404).json({ error: 'Quote not found' });
+  }
+});
+
+// Delete quote
+app.delete('/api/quotes/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = quotes.findIndex(q => q.id === id);
+  
+  if (index !== -1) {
+    quotes.splice(index, 1);
+    saveQuotes();
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Quote not found' });
+  }
+});
+
+// Bulk import quotes
+app.post('/api/quotes/import', (req, res) => {
+  const newQuotes = req.body.quotes.map((quote, index) => ({
+    ...quote,
+    id: Date.now() + index
+  }));
+  quotes = newQuotes;
+  saveQuotes();
+  res.json({ count: quotes.length });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
