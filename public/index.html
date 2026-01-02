@@ -1033,24 +1033,36 @@
                 }
 
                 // Check remaining keywords against all searchable fields
-                // Skip keyword matching if we already have specific filters (asset types, loan programs, lender types)
-                if (parsed.keywords.length > 0 && 
-                    parsed.assetTypes.length === 0 && 
-                    parsed.loanPrograms.length === 0 &&
-                    parsed.lenderTypes.length === 0) {
-                  const searchableFields = [
+                // This enables searching for anything: DST, 40 year amortization, yield maintenance, etc.
+                if (parsed.keywords.length > 0) {
+                  // If we have specific filters (asset types, loan programs, lender types),
+                  // still search ALL fields for remaining keywords
+                  // This allows "permanent DST" to work (permanent = filter, DST = keyword)
+                  
+                  const allLenderText = [
                     lender.Lender,
+                    lender['Loan Program'],
                     lender['Lender Type'],
-                    lender['Asset Types/Classes/Markets'],
                     lender['Point of Contact'],
-                    lender['Additional Info']
+                    lender['Asset Types/Classes/Markets'],
+                    lender.Structure,
+                    lender.Prepayment,
+                    lender['Guarantee/Reserves/Covenants'],
+                    lender.Constraints,
+                    lender['Spread/Pricing'],
+                    lender['Lock/App/Commitment/Closing'],
+                    lender['Fees / Deposits'],
+                    lender['Will not do'],
+                    lender['Additional Info'],
+                    lender['Avg. Loan']
                   ].join(' ').toLowerCase();
                   
-                  const hasKeyword = parsed.keywords.some(keyword => 
-                    searchableFields.includes(keyword)
+                  // All keywords must appear somewhere in the lender data
+                  const allKeywordsMatch = parsed.keywords.every(keyword => 
+                    allLenderText.includes(keyword)
                   );
                   
-                  if (!hasKeyword) {
+                  if (!allKeywordsMatch) {
                     return false;
                   }
                 }
