@@ -583,10 +583,27 @@
             const twelveMonthsAgo = new Date();
             twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
             
+            // Normalize lender name for matching (remove common suffixes, lowercase)
+            const normalizeName = (name) => {
+              return (name || '')
+                .toLowerCase()
+                .replace(/\s+(group|financial|capital|life|insurance|company|corp|corporation|inc|llc|lp)$/gi, '')
+                .trim();
+            };
+            
+            const normalizedLenderName = normalizeName(lenderName);
+            
             return quotes
               .filter(q => {
                 const quoteLender = (q['Lender '] || q['Lender'] || '').trim();
-                if (quoteLender !== lenderName) return false;
+                const normalizedQuoteLender = normalizeName(quoteLender);
+                
+                // Match if normalized names match OR if one contains the other
+                const matches = normalizedQuoteLender === normalizedLenderName ||
+                                normalizedQuoteLender.includes(normalizedLenderName) ||
+                                normalizedLenderName.includes(normalizedQuoteLender);
+                
+                if (!matches) return false;
                 
                 try {
                   const quoteDate = new Date(q.Date);
@@ -660,6 +677,7 @@
           const [quotes, setQuotes] = useState([]);
           const [activeTab, setActiveTab] = useState('lenders');
           const [quoteSearchTerm, setQuoteSearchTerm] = useState('');
+          const [expandedQuotes, setExpandedQuotes] = useState(new Set());
           const [filters, setFilters] = useState({
             lenderType: '',
             minLoan: '',
@@ -1059,6 +1077,17 @@
               }
 
               return true;
+            })
+            .sort((a, b) => {
+              // Sort: lenders with Min/Max loan data first, then alphabetically
+              const aHasRange = a['Min Loan'] || a['Max Loan'];
+              const bHasRange = b['Min Loan'] || b['Max Loan'];
+              
+              if (aHasRange && !bHasRange) return -1;
+              if (!aHasRange && bHasRange) return 1;
+              
+              // Both have or both don't have - sort alphabetically
+              return (a.Lender || '').localeCompare(b.Lender || '');
             });
           }, [lenders, searchTerm, filters]);
 
@@ -1573,6 +1602,7 @@
                           <table>
                           <thead>
                             <tr>
+                              <th style={{width: '30px'}}></th>
                               <th>Date</th>
                               <th>Deal Name</th>
                               <th>Lender</th>
@@ -1596,18 +1626,76 @@
                               ].join(' ').toLowerCase();
                               return searchFields.includes(search);
                             }).slice(0, 100).map((quote, idx) => (
-                              <tr key={idx}>
-                                <td>{quote.Date}</td>
-                                <td>{quote['Deal Name']}</td>
-                                <td>{(quote['Lender '] || quote['Lender'] || '').trim()}</td>
-                                <td>{quote['Product Type']}</td>
-                                <td>{quote.Proceeds}</td>
-                                <td>{quote.Leverage}</td>
-                                <td>{quote.Spread || 'n/a'}</td>
-                                <td>{quote['Full Rate']}</td>
-                                <td>{quote.Term}</td>
-                                <td>{quote.Amoritization}</td>
-                              </tr>
+                              <React.Fragment key={idx}>
+                                <tr onClick={() => {
+                                  const newExpanded = new Set(expandedQuotes);
+                                  if (newExpanded.has(idx)) {
+                                    newExpanded.delete(idx);
+                                  } else {
+                                    newExpanded.add(idx);
+                                  }
+                                  setExpandedQuotes(newExpanded);
+                                }} style={{cursor: 'pointer'}}>
+                                  <td>
+                                    <span className="icon-xs">
+                                      {expandedQuotes.has(idx) ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                                    </span>
+                                  </td>
+                                  <td>{quote.Date}</td>
+                                  <td>{quote['Deal Name']}</td>
+                                  <td>{(quote['Lender '] || quote['Lender'] || '').trim()}</td>
+                                  <td>{quote['Product Type']}</td>
+                                  <td>{quote.Proceeds}</td>
+                                  <td>{quote.Leverage}</td>
+                                  <td>{quote.Spread || 'n/a'}</td>
+                                  <td>{quote['Full Rate']}</td>
+                                  <td>{quote.Term}</td>
+                                  <td>{quote.Amoritization}</td>
+                                </tr>
+                                
+                                {expandedQuotes.has(idx) && (
+                                  <tr className="expanded-row">
+                                    <td colSpan="11" style={{padding: '1rem'}}>
+                                      <div className="details-grid">
+                                        <div className="details-section">
+                                          <h4>Deal Details</h4>
+                                          {quote['Deal Type'] && <p><strong>Deal Type:</strong> {quote['Deal Type']}</p>}
+                                          {quote['SF/Units'] && <p><strong>SF/Units:</strong> {quote['SF/Units']}</p>}
+                                          {quote.Originator && <p><strong>Originator:</strong> {quote.Originator}</p>}
+                                        </div>
+                                        
+                                        <div className="details-section">
+                                          <h4>Pricing Details</h4>
+                                          {quote['Index Base'] && <p><strong>Index Base:</strong> {quote['Index Base']}</p>}
+                                          {quote['Index Rate'] && <p><strong>Index Rate:</strong> {quote['Index Rate']}</p>}
+                                          {quote.Floor && <p><strong>Floor:</strong> {quote.Floor}</p>}
+                                        </div>
+                                        
+                                        <div className="details-section">
+                                          <h4>Terms</h4>
+                                          {quote.Recourse && <p><strong>Recourse:</strong> {quote.Recourse}</p>}
+                                          {quote.Prepayment && <p><strong>Prepayment:</strong> {quote.Prepayment}</p>}
+                                          {quote['Guarantee/Reserves/Covenants'] && <p><strong>Guarantees:</strong> {quote['Guarantee/Reserves/Covenants']}</p>}
+                                        </div>
+                                        
+                                        <div className="details-section">
+                                          <h4>Fees & Conditions</h4>
+                                          {quote['Lender Fee'] && <p><strong>Lender Fee:</strong> {quote['Lender Fee']}</p>}
+                                          {quote['Ecrows/Covenants'] && <p><strong>Escrows:</strong> {quote['Ecrows/Covenants']}</p>}
+                                          {quote['Lock/App/Commitment/Closing'] && <p><strong>Lock/Commitment:</strong> {quote['Lock/App/Commitment/Closing']}</p>}
+                                        </div>
+                                        
+                                        {quote['Comments - Other Conditions'] && (
+                                          <div className="details-section" style={{gridColumn: '1 / -1'}}>
+                                            <h4>Additional Info</h4>
+                                            <p>{quote['Comments - Other Conditions']}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             ))}
                           </tbody>
                         </table>
