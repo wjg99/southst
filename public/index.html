@@ -559,14 +559,34 @@
         );
 
         const LenderPortal = () => {
+          const [isAuthenticated, setIsAuthenticated] = useState(false);
+          const [passwordInput, setPasswordInput] = useState('');
+          const [passwordError, setPasswordError] = useState(false);
           const [lenders, setLenders] = useState([]);
           const [loading, setLoading] = useState(true);
           
+          // Password check
+          const handlePasswordSubmit = (e) => {
+            e.preventDefault();
+            // Password is set via environment variable, fallback to 'southst2025'
+            const correctPassword = 'GSW1994';
+            
+            if (passwordInput === correctPassword) {
+              setIsAuthenticated(true);
+              setPasswordError(false);
+            } else {
+              setPasswordError(true);
+              setPasswordInput('');
+            }
+          };
+          
           // Load lenders and quotes from API on mount
           useEffect(() => {
-            fetchLenders();
-            fetchQuotes();
-          }, []);
+            if (isAuthenticated) {
+              fetchLenders();
+              fetchQuotes();
+            }
+          }, [isAuthenticated]);
           
           const fetchQuotes = async () => {
             try {
@@ -1106,6 +1126,88 @@
           const lenderTypes = useMemo(() => {
             return [...new Set(lenders.map(l => l['Lender Type']).filter(Boolean))].sort();
           }, [lenders]);
+
+          // Show password screen if not authenticated
+          if (!isAuthenticated) {
+            return (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '100vh',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  padding: '3rem',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                  maxWidth: '400px',
+                  width: '100%'
+                }}>
+                  <h2 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold',
+                    marginBottom: '1.5rem',
+                    textAlign: 'center',
+                    color: '#111827'
+                  }}>
+                    Commercial Lender Database
+                  </h2>
+                  <p style={{
+                    color: '#6b7280',
+                    marginBottom: '1.5rem',
+                    textAlign: 'center',
+                    fontSize: '0.875rem'
+                  }}>
+                    Please enter the password to access the database
+                  </p>
+                  <form onSubmit={handlePasswordSubmit}>
+                    <input
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      placeholder="Enter password"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: passwordError ? '2px solid #ef4444' : '1px solid #d1d5db',
+                        borderRadius: '0.5rem',
+                        fontSize: '1rem',
+                        marginBottom: '1rem'
+                      }}
+                      autoFocus
+                    />
+                    {passwordError && (
+                      <p style={{
+                        color: '#ef4444',
+                        fontSize: '0.875rem',
+                        marginBottom: '1rem'
+                      }}>
+                        Incorrect password. Please try again.
+                      </p>
+                    )}
+                    <button
+                      type="submit"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Access Database
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          }
 
           if (loading) {
             return <div className="loading">Loading lenders...</div>;
