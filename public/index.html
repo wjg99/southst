@@ -1435,6 +1435,10 @@
                                               <input type="text" value={editForm['Avg. Loan'] || ''} 
                                                 onChange={(e) => setEditForm({ ...editForm, 'Avg. Loan': e.target.value })} />
                                             </p>
+                                            <p><span className="detail-label">Asset Types:</span><br/>
+                                              <textarea value={editForm['Asset Types/Classes/Markets'] || ''} 
+                                                onChange={(e) => setEditForm({ ...editForm, 'Asset Types/Classes/Markets': e.target.value })} />
+                                            </p>
                                             <p><span className="detail-label">Constraints:</span><br/>
                                               <textarea value={editForm.Constraints || ''} 
                                                 onChange={(e) => setEditForm({ ...editForm, Constraints: e.target.value })} />
@@ -1448,6 +1452,7 @@
                                           <>
                                             {lender['Loan Program'] && <p><span className="detail-label">Program:</span> {lender['Loan Program']}</p>}
                                             {lender['Avg. Loan'] && <p><span className="detail-label">Avg Loan:</span> {lender['Avg. Loan']}</p>}
+                                            {lender['Asset Types/Classes/Markets'] && <p><span className="detail-label">Asset Types:</span> {lender['Asset Types/Classes/Markets']}</p>}
                                             {lender.Constraints && <p><span className="detail-label">Constraints:</span> {lender.Constraints}</p>}
                                             {lender['Spread/Pricing'] && <p><span className="detail-label">Pricing:</span> {lender['Spread/Pricing']}</p>}
                                           </>
